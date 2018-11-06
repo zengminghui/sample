@@ -70,7 +70,15 @@ class UsersController extends Controller
     }
     public function index()
     {
-        $users = User::all();
+        $users = User::paginate(10);
         return view('users.index',compact('users'));
+    }
+    /** 删除 */
+    public function destroy(User $user)
+    {
+        $this->authorize('destroy', $user);
+        $user->delete();
+        session()->flash('success','删除成功！');
+        return back();
     }
 }
