@@ -8,13 +8,24 @@ use App\Models\User;
 use Auth;
 class UsersController extends Controller
 {
+    public function __construct()
+    {
+        /** 只让未登录用户访问注册页面
+         * 下列中间件的 实现 通过auth权限验证后，排除show,create,store方法，使登录用户不可访问这些方法
+         */
+        $this->middleware(
+            'auth',[
+                'except' => ['show','create','store']
+            ]
+        );
+    }
     public function create()
     {
         return view('users.create');
     }
     public function show(User $user)
     {
-        return view('users.show', compact('user'));
+        return view('users.show', compact('user','index'));
     }
     public function store(Request $request)
     {
@@ -32,5 +43,34 @@ class UsersController extends Controller
         Auth::login($user);
         session()->flash('success', '欢迎，您将在这里开启一段新的旅程~');
         return redirect()->route('users.show', [$user]);
+    }
+    public function edit(User $user)
+    {
+        $this->authorize('update', $user);
+        return view('users.edit',compact('user'));
+    }
+    public function update(User $user, Request $request)
+    {
+
+        $this->validate($request, [
+            'name' => 'required|max:50',
+            'password' => 'nullable|confirmed|min:6'
+        ]);
+        $this->authorize('update', $user);
+        $data = [];
+        $data['name'] = $request->name;
+        if ($request->password) {
+            $data['password'] = bcrypt($request->password);
+        }
+        $user->update($data);
+
+        session()->flash('success', '个人资料更新成功！');
+
+        return redirect()->route('users.show', $user->id);
+    }
+    public function index()
+    {
+        $users = User::all();
+        return view('users.index',compact('users'));
     }
 }
